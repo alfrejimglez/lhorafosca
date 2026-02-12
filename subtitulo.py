@@ -15,49 +15,48 @@ if not match:
 
 base_url = match.group(1)  # Parte de la URL hasta 'segment'
 token = match.group(3)  # Token después del .vtt
-end_segment = int(match.group(2))  # Número del segmento final (e.g., 110)
 
 # Asumimos que el segmento inicial siempre es 1
 start_segment = 1
 
 # Ruta de la carpeta donde se descargará el archivo
-output_dir = r"C:\Users\alfre\Documentos\Lahorafosca"
+output_dir = os.getcwd()
 output_file = os.path.join(output_dir, "subtitles_combined.vtt")
+
+# Asegurar que la carpeta de salida exista
+os.makedirs(output_dir, exist_ok=True)
 
 # Inicializar el archivo de salida con la cabecera WEBVTT
 with open(output_file, "w", encoding="utf-8") as outfile:
     outfile.write("WEBVTT\n\n")
 
 # Descargar y combinar los subtítulos
-for i in range(start_segment, end_segment + 1):
-    # Crear la URL para cada segmento
+i = start_segment
+while True:
     url = f"{base_url}{i}.vtt{token}"
 
     try:
-        # Descargar el archivo VTT con un tiempo de espera
         response = requests.get(url, timeout=10)
 
-        # Verificar si la descarga fue exitosa
         if response.status_code == 200:
             print(f"Descargando segmento {i}")
 
-            # Detectar la codificación del contenido recibido
             result = chardet.detect(response.content)
-            encoding = result['encoding']
+            encoding = result["encoding"] or "utf-8"
 
-            # Leer el contenido con la codificación detectada
             vtt_content = response.content.decode(encoding).splitlines()
 
-            # Guardar el contenido, omitiendo la primera línea (WEBVTT)
             with open(output_file, "a", encoding="utf-8") as outfile:
                 outfile.write("\n".join(vtt_content[1:]) + "\n")
+            i += 1
         else:
-            print(f"Error al descargar el segmento {i}: {response.status_code}")
+            print(f"Fin de segmentos en {i}: {response.status_code}")
+            break
 
     except requests.exceptions.RequestException as e:
         print(f"Error al descargar el segmento {i}: {e}")
+        break
 
-    # Añadir un pequeño retraso entre solicitudes
     time.sleep(0.5)
 
 print(f"Subtítulos combinados guardados en {output_file}")
